@@ -53,6 +53,24 @@ class KnapsackApp:
         self.max_value_label = ttk.Label(self.result_frame, text="")
         self.max_value_label.pack()
 
+    def parse_input(self):
+        try:
+            n = self.n_var.get()
+            W = self.W_var.get()
+            weights = [int(x.strip()) for x in self.weights_var.get().split(',')]
+            values = [int(x.strip()) for x in self.values_var.get().split(',')]
+        
+            if len(weights) != n or len(values) != n:
+                raise ValueError(f"Кількість предметів має бути {n}")
+            if W < 0 or any(w < 0 for w in weights) or any(v < 0 for v in values):
+                raise ValueError("Негативні значення не дозволені")
+        
+            return n, W, weights, values
+        except Exception as e:
+            return None, None, None, None
+
+        
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = KnapsackApp(root)
