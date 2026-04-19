@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
 class KnapsackApp:
     def __init__(self, root):
@@ -59,14 +59,15 @@ class KnapsackApp:
             W = self.W_var.get()
             weights = [int(x.strip()) for x in self.weights_var.get().split(',')]
             values = [int(x.strip()) for x in self.values_var.get().split(',')]
-        
+            
             if len(weights) != n or len(values) != n:
                 raise ValueError(f"Кількість предметів має бути {n}")
             if W < 0 or any(w < 0 for w in weights) or any(v < 0 for v in values):
                 raise ValueError("Негативні значення не дозволені")
-        
+            
             return n, W, weights, values
         except Exception as e:
+            messagebox.showerror("Помилка введення", str(e))
             return None, None, None, None
         
     # ---------- 1. Brute Force ----------
