@@ -181,6 +181,30 @@ class KnapsackApp:
         backtrack(0, 0, 0, [])
         best_combination.sort()
         return None, best_value, best_combination
+    
+    def display_table(self, weights, values, dp, selected):
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
+        
+        n = len(weights)
+        W = len(dp[0]) - 1
+        columns = ["i"] + [f"w={w}" for w in range(W + 1)]
+        tree = ttk.Treeview(self.table_frame, columns=columns, show="headings", height=min(n+2, 20))
+        
+        tree.heading("i", text="i")
+        for w in range(W + 1):
+            tree.heading(f"w={w}", text=f"{w}")
+            tree.column(f"w={w}", width=60, anchor="center")
+        tree.column("i", width=40, anchor="center")
+        
+        for i in range(n + 1):
+            row_values = [str(i)] + [str(dp[i][w]) for w in range(W + 1)]
+            tree.insert("", "end", values=row_values)
+        
+        scrollbar = ttk.Scrollbar(self.table_frame, orient=tk.VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
             
 
 if __name__ == "__main__":
