@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-
+# Етап 1 (K-01): Базовий інтерфейс
 class KnapsackApp:
     def __init__(self, root):
         self.root = root
@@ -53,6 +53,8 @@ class KnapsackApp:
         self.max_value_label = ttk.Label(self.result_frame, text="")
         self.max_value_label.pack()
 
+# Етап 2 (K-02): Парсинг вхідних даних
+# Етап 4 (K-08): Обробка помилок (Було додано обробку негативних значень та помилок)
     def parse_input(self):
         try:
             n = self.n_var.get()
@@ -70,6 +72,7 @@ class KnapsackApp:
             messagebox.showerror("Помилка введення", str(e))
             return None, None, None, None
         
+# Етап 3 (K-03): Всі 5 методів розв'язання        
     # ---------- 1. Brute Force ----------
     def solve_bruteforce(self, weights, values, n, W):
         best_value = 0
@@ -182,6 +185,8 @@ class KnapsackApp:
         best_combination.sort()
         return None, best_value, best_combination
     
+# Етап 5 (K-04): Відображення таблиці DP    
+
     def display_table(self, weights, values, dp, selected):
         for widget in self.table_frame.winfo_children():
             widget.destroy()
@@ -205,6 +210,29 @@ class KnapsackApp:
         tree.configure(yscrollcommand=scrollbar.set)
         tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+# Етап 6 (K-05): Відновлення набору та виведення результату 
+    def display_result(self, selected, weights, values, max_value):
+        current_text = self.result_label.cget("text")
+        
+        if not selected:
+            items_text = "Жоден предмет не вибрано"
+            total_weight = 0
+        else:
+            items_lines = []
+            total_weight = 0
+            for idx in selected:
+                items_lines.append(f"Предмет {idx+1} (вага={weights[idx]}, цінність={values[idx]})")
+                total_weight += weights[idx]
+            items_text = "\n".join(items_lines)
+        
+        if current_text and "[WARNING]" in current_text:
+            full_text = current_text + "\n\n" + items_text
+        else:
+            full_text = items_text
+        
+        self.result_label.config(text=full_text)
+        self.max_value_label.config(text=f"Максимальна цінність: {max_value}\nЗагальна вага: {total_weight}")
             
 
 if __name__ == "__main__":
