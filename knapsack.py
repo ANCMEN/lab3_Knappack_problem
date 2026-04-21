@@ -77,7 +77,7 @@ class KnapsackApp:
         self.weights_var.set("8,1,4,7,8")
         self.values_var.set("9,9,15,9,11")
         self.clear_table()
-        
+
 # Етап 2 (K-02): Парсинг вхідних даних
 # Етап 4 (K-08): Обробка помилок (Було додано обробку негативних значень та помилок)
     def parse_input(self):
@@ -227,10 +227,14 @@ class KnapsackApp:
             tree.column(f"w={w}", width=60, anchor="center")
         tree.column("i", width=40, anchor="center")
         
+#  Етап 8 (K-06): Візуалізація вибраних предметів
         for i in range(n + 1):
             row_values = [str(i)] + [str(dp[i][w]) for w in range(W + 1)]
-            tree.insert("", "end", values=row_values)
-        
+            item = tree.insert("", "end", values=row_values)
+            if i > 0 and (i-1) in selected:
+                tree.tag_configure(f"selected_{i}", background="#90EE90")
+                tree.item(item, tags=(f"selected_{i}",))
+
         scrollbar = ttk.Scrollbar(self.table_frame, orient=tk.VERTICAL, command=tree.yview)
         tree.configure(yscrollcommand=scrollbar.set)
         tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
