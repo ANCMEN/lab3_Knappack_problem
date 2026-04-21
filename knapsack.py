@@ -37,6 +37,14 @@ class KnapsackApp:
         ttk.Label(input_frame, text="Цінність предметів (v[i]):").grid(row=row, column=0, sticky=tk.W, pady=5)
         ttk.Entry(input_frame, textvariable=self.values_var, width=20).grid(row=row, column=1, padx=5, pady=5)
         row += 1
+ # "K-07: Додавання тестового варіанту 14"
+        ttk.Label(input_frame, text="Тестовий варіант:").grid(row=row, column=0, sticky=tk.W, pady=5)
+        self.variant_combo = ttk.Combobox(input_frame, values=["Варіант 14 (n=5, W=25)"], width=18)
+        self.variant_combo.grid(row=row, column=1, padx=5, pady=5)
+        self.variant_combo.set("Варіант 14 (n=5, W=25)")
+        self.variant_combo.bind("<<ComboboxSelected>>", self.load_test_variant)
+        row += 1
+
  # Етап 7 (K-09): Кнопки керування
         ttk.Separator(input_frame, orient=tk.HORIZONTAL).grid(row=row, column=0, columnspan=2, sticky=tk.EW, pady=15)
         row += 1
@@ -72,6 +80,14 @@ class KnapsackApp:
         self.max_value_label.config(text="")
 
     def reset_defaults(self):
+        self.n_var.set(5)
+        self.W_var.set(25)
+        self.weights_var.set("8,1,4,7,8")
+        self.values_var.set("9,9,15,9,11")
+        self.clear_table()
+        
+ # метод для завантаження тестового варіанту
+    def load_test_variant(self, event=None):
         self.n_var.set(5)
         self.W_var.set(25)
         self.weights_var.set("8,1,4,7,8")
