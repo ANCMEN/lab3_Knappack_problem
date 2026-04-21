@@ -37,6 +37,17 @@ class KnapsackApp:
         ttk.Label(input_frame, text="Цінність предметів (v[i]):").grid(row=row, column=0, sticky=tk.W, pady=5)
         ttk.Entry(input_frame, textvariable=self.values_var, width=20).grid(row=row, column=1, padx=5, pady=5)
         row += 1
+ # Етап 7 (K-09): Кнопки керування
+        ttk.Separator(input_frame, orient=tk.HORIZONTAL).grid(row=row, column=0, columnspan=2, sticky=tk.EW, pady=15)
+        row += 1
+        
+        ttk.Button(input_frame, text="Розв'язати", command=self.solve).grid(row=row, column=0, columnspan=2, pady=5)
+        row += 1
+        ttk.Button(input_frame, text="Очистити таблицю", command=self.clear_table).grid(row=row, column=0, columnspan=2, pady=5)
+        row += 1
+        ttk.Button(input_frame, text="За замовчуванням", command=self.reset_defaults).grid(row=row, column=0, columnspan=2, pady=5)
+        row += 1
+        ttk.Button(input_frame, text="Вихід", command=self.root.quit).grid(row=row, column=0, columnspan=2, pady=20)
         
         result_frame = ttk.LabelFrame(main_frame, text="Результати", padding="5")
         result_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -53,6 +64,20 @@ class KnapsackApp:
         self.max_value_label = ttk.Label(self.result_frame, text="")
         self.max_value_label.pack()
 
+ # Це методи для функціонування кнопок керування
+    def clear_table(self):
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
+        self.result_label.config(text="")
+        self.max_value_label.config(text="")
+
+    def reset_defaults(self):
+        self.n_var.set(5)
+        self.W_var.set(25)
+        self.weights_var.set("8,1,4,7,8")
+        self.values_var.set("9,9,15,9,11")
+        self.clear_table()
+        
 # Етап 2 (K-02): Парсинг вхідних даних
 # Етап 4 (K-08): Обробка помилок (Було додано обробку негативних значень та помилок)
     def parse_input(self):
@@ -233,7 +258,10 @@ class KnapsackApp:
         
         self.result_label.config(text=full_text)
         self.max_value_label.config(text=f"Максимальна цінність: {max_value}\nЗагальна вага: {total_weight}")
-            
+   
+    def solve(self):
+        """Тимчасовий метод, буде замінений на Етапі 10"""
+        print("solve() буде реалізовано на Етапі 10")        
 
 if __name__ == "__main__":
     root = tk.Tk()
