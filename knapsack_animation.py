@@ -1,0 +1,402 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+"""Етап 1 (K-01): Базовий інтерфейс"""
+class KnapsackApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Задача «Рюкзак» — 5 методів")
+        self.root.geometry("1050x750")
+        
+        self.n_var = tk.IntVar(value=5)
+        self.W_var = tk.IntVar(value=25)
+        self.weights_var = tk.StringVar(value="8,1,4,7,8")
+        self.values_var = tk.StringVar(value="9,9,15,9,11")
+        
+        self.setup_ui()
+    
+    def setup_ui(self):
+        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        input_frame = ttk.LabelFrame(main_frame, text="Вхідні дані", padding="10")
+        input_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        
+        row = 0
+        ttk.Label(input_frame, text="Кількість предметів (n):").grid(row=row, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(input_frame, textvariable=self.n_var, width=15).grid(row=row, column=1, padx=5, pady=5)
+        row += 1
+        
+        ttk.Label(input_frame, text="Місткість рюкзака (W):").grid(row=row, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(input_frame, textvariable=self.W_var, width=15).grid(row=row, column=1, padx=5, pady=5)
+        row += 1
+        
+        ttk.Label(input_frame, text="Вага предметів (w[i]):").grid(row=row, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(input_frame, textvariable=self.weights_var, width=20).grid(row=row, column=1, padx=5, pady=5)
+        row += 1
+        
+        ttk.Label(input_frame, text="Цінність предметів (v[i]):").grid(row=row, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(input_frame, textvariable=self.values_var, width=20).grid(row=row, column=1, padx=5, pady=5)
+        row += 1
+        """K-07: Додавання тестового варіанту 14"""
+        ttk.Label(input_frame, text="Тестовий варіант:").grid(row=row, column=0, sticky=tk.W, pady=5)
+        self.variant_combo = ttk.Combobox(input_frame, values=["Варіант 14 (n=5, W=25)"], width=18)
+        self.variant_combo.grid(row=row, column=1, padx=5, pady=5)
+        self.variant_combo.set("Варіант 14 (n=5, W=25)")
+        self.variant_combo.bind("<<ComboboxSelected>>", self.load_test_variant)
+        row += 1
+
+        """Етап 10 (K-10): Вибір методу та головний solve"""
+        self.method_var = tk.StringVar(value="Dynamic Programming (DP)")
+        ttk.Label(input_frame, text="Метод розв'язку:").grid(row=row, column=0, sticky=tk.W, pady=5)
+        method_combo = ttk.Combobox(
+            input_frame, 
+            textvariable=self.method_var,
+            values=[
+                "Brute Force (перебір)",
+                "Recursive (рекурсія)",
+                "Dynamic Programming (DP)",
+                "Greedy (жадібний)",
+                "Branch and Bound (гілки та межі)"
+            ],
+            width=25
+        )
+        method_combo.grid(row=row, column=1, padx=5, pady=5)
+        row += 1
+
+        """Етап 7 (K-09): Кнопки керування"""
+        ttk.Separator(input_frame, orient=tk.HORIZONTAL).grid(row=row, column=0, columnspan=2, sticky=tk.EW, pady=15)
+        row += 1
+        
+        ttk.Button(input_frame, text="Розв'язати", command=self.solve).grid(row=row, column=0, columnspan=2, pady=5)
+        row += 1
+        ttk.Button(input_frame, text="Очистити таблицю", command=self.clear_table).grid(row=row, column=0, columnspan=2, pady=5)
+        row += 1
+        ttk.Button(input_frame, text="За замовчуванням", command=self.reset_defaults).grid(row=row, column=0, columnspan=2, pady=5)
+        row += 1
+        ttk.Button(input_frame, text="Вихід", command=self.root.quit).grid(row=row, column=0, columnspan=2, pady=20)
+        
+        result_frame = ttk.LabelFrame(main_frame, text="Результати", padding="5")
+        result_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        
+        self.table_frame = ttk.Frame(result_frame)
+        self.table_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        
+        self.result_frame = ttk.LabelFrame(result_frame, text="Оптимальний набір", padding="5")
+        self.result_frame.pack(fill=tk.X, pady=5)
+        
+        self.result_label = ttk.Label(self.result_frame, text="")
+        self.result_label.pack()
+        
+        self.max_value_label = ttk.Label(self.result_frame, text="")
+        self.max_value_label.pack()
+
+    """Це методи для функціонування кнопок керування"""
+    def clear_table(self):
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
+        self.result_label.config(text="")
+        self.max_value_label.config(text="")
+
+    def reset_defaults(self):
+        self.n_var.set(5)
+        self.W_var.set(25)
+        self.weights_var.set("8,1,4,7,8")
+        self.values_var.set("9,9,15,9,11")
+        self.clear_table()
+
+    """метод для завантаження тестового варіанту"""
+    def load_test_variant(self, event=None):
+        self.n_var.set(5)
+        self.W_var.set(25)
+        self.weights_var.set("8,1,4,7,8")
+        self.values_var.set("9,9,15,9,11")
+        self.clear_table()
+
+    """Етап 2 (K-02): Парсинг вхідних даних"""
+    """Етап 4 (K-08): Обробка помилок (Було додано обробку негативних значень та помилок)"""
+    def parse_input(self):
+        try:
+            n = self.n_var.get()
+            W = self.W_var.get()
+            weights = [int(x.strip()) for x in self.weights_var.get().split(',')]
+            values = [int(x.strip()) for x in self.values_var.get().split(',')]
+            
+            if len(weights) != n or len(values) != n:
+                raise ValueError(f"Кількість предметів має бути {n}")
+            if W < 0 or any(w < 0 for w in weights) or any(v < 0 for v in values):
+                raise ValueError("Негативні значення не дозволені")
+            
+            return n, W, weights, values
+        except Exception as e:
+            messagebox.showerror("Помилка введення", str(e))
+            return None, None, None, None
+        
+    """Етап 3 (K-03): Всі 5 методів розв'язання"""        
+    # ---------- 1. Brute Force ----------
+    def solve_bruteforce(self, weights, values, n, W):
+        best_value = 0
+        best_combination = []
+        for mask in range(1 << n):
+            total_weight = 0
+            total_value = 0
+            current = []
+            for i in range(n):
+                if mask >> i & 1:
+                    total_weight += weights[i]
+                    total_value += values[i]
+                    current.append(i)
+            if total_weight <= W and total_value > best_value:
+                best_value = total_value
+                best_combination = current.copy()
+        return None, best_value, best_combination
+
+    # ---------- 2. Recursive ----------
+    def solve_recursive(self, weights, values, n, W):
+        def rec(i, remaining_w):
+            if i == n or remaining_w <= 0:
+                return 0, []
+            val_no, items_no = rec(i+1, remaining_w)
+            if weights[i] <= remaining_w:
+                val_yes, items_yes = rec(i+1, remaining_w - weights[i])
+                val_yes += values[i]
+                if val_yes > val_no:
+                    return val_yes, items_yes + [i]
+            return val_no, items_no
+        max_value, selected = rec(0, W)
+        selected.sort()
+        return None, max_value, selected
+
+    # ---------- 3. Dynamic Programming ----------
+    def solve_DP(self, weights, values, n, W):
+        dp = [[0] * (W + 1) for _ in range(n + 1)]
+        for i in range(1, n + 1):
+            for w in range(W + 1):
+                if weights[i-1] <= w:
+                    dp[i][w] = max(dp[i-1][w], dp[i-1][w - weights[i-1]] + values[i-1])
+                else:
+                    dp[i][w] = dp[i-1][w]
+        max_value = dp[n][W]
+        selected = []
+        w = W
+        for i in range(n, 0, -1):
+            if dp[i][w] != dp[i-1][w]:
+                selected.append(i-1)
+                w -= weights[i-1]
+        selected.reverse()
+        return dp, max_value, selected
+
+    # ---------- 4. Greedy ----------
+    def solve_greedy(self, weights, values, n, W):
+        items = [(values[i], weights[i], i) for i in range(n)]
+        items.sort(key=lambda x: x[0]/x[1] if x[1]!=0 else 0, reverse=True)
+        selected = []
+        total_weight = 0
+        total_value = 0
+        for v, w, idx in items:
+            if total_weight + w <= W:
+                selected.append(idx)
+                total_weight += w
+                total_value += v
+        selected.sort()
+        return None, total_value, selected
+
+    # ---------- 5. Branch and Bound ----------
+    def solve_branch_bound(self, weights, values, n, W):
+        items = sorted([(values[i], weights[i], i) for i in range(n)],
+                    key=lambda x: x[0]/x[1] if x[1]!=0 else 0, reverse=True)
+        sorted_vals = [v for v, w, i in items]
+        sorted_weights = [w for v, w, i in items]
+        original_indices = [i for v, w, i in items]
+        
+        best_value = 0
+        best_combination = []
+        
+        def bound(i, current_w, current_v):
+            if current_w > W:
+                return 0
+            remaining_w = W - current_w
+            bound_val = current_v
+            j = i
+            while j < n and sorted_weights[j] <= remaining_w:
+                bound_val += sorted_vals[j]
+                remaining_w -= sorted_weights[j]
+                j += 1
+            if j < n:
+                bound_val += (remaining_w / sorted_weights[j]) * sorted_vals[j]
+            return bound_val
+        
+        def backtrack(i, current_w, current_v, taken):
+            nonlocal best_value, best_combination
+            if i == n:
+                if current_v > best_value:
+                    best_value = current_v
+                    best_combination = taken.copy()
+                return
+            if bound(i, current_w, current_v) <= best_value:
+                return
+            if current_w + sorted_weights[i] <= W:
+                taken.append(original_indices[i])
+                backtrack(i+1, current_w + sorted_weights[i], current_v + sorted_vals[i], taken)
+                taken.pop()
+            backtrack(i+1, current_w, current_v, taken)
+        
+        backtrack(0, 0, 0, [])
+        best_combination.sort()
+        return None, best_value, best_combination
+    
+""""K-11: Базовий клас анімації AnimationController"""    
+class AnimationController:
+    """Контролер анімації для всіх алгоритмів"""
+    
+    def __init__(self, app):
+        self.app = app
+        self.is_running = False
+        self.is_paused = False
+        self.speed = 500  # мс між кроками
+        self.current_step = 0
+        self.total_steps = 0
+        self.after_id = None
+        
+    def start(self):
+        """Запуск анімації"""
+        if self.is_paused:
+            self.is_paused = False
+            self.resume()
+        elif not self.is_running:
+            self.is_running = True
+            self.current_step = 0
+            self.next_step()
+    
+    def pause(self):
+        """Пауза"""
+        self.is_paused = True
+        if self.after_id:
+            self.app.root.after_cancel(self.after_id)
+    
+    def resume(self):
+        """Продовження"""
+        if self.is_running and self.is_paused:
+            self.is_paused = False
+            self.next_step()
+    
+    def stop(self):
+        """Зупинка"""
+        self.is_running = False
+        self.is_paused = False
+        if self.after_id:
+            self.app.root.after_cancel(self.after_id)
+    
+    def next_step(self):
+        """Виконання одного кроку"""
+        if not self.is_running or self.is_paused:
+            return
+        if self.current_step >= self.total_steps:
+            self.stop()
+            self.app.update_animation_status("Анімація завершена!")
+            return
+        
+        # Викликаємо метод анімації поточного алгоритму
+        if hasattr(self.app, f"animate_step_{self.current_step}"):
+            getattr(self.app, f"animate_step_{self.current_step}")()
+        
+        self.current_step += 1
+        self.app.update_progress(self.current_step, self.total_steps)
+        
+        # Плануємо наступний крок
+        self.after_id = self.app.root.after(self.speed, self.next_step)
+    
+    def set_speed(self, speed):
+        """Зміна швидкості"""
+        speed_map = {"Повільна": 800, "Нормальна": 400, "Швидка": 150, "Дуже швидка": 50}
+        self.speed = speed_map.get(speed, 400)    
+    
+    """Етап 5 (K-04): Відображення таблиці DP"""    
+
+    def display_table(self, weights, values, dp, selected):
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
+        
+        n = len(weights)
+        W = len(dp[0]) - 1
+        columns = ["i"] + [f"w={w}" for w in range(W + 1)]
+        tree = ttk.Treeview(self.table_frame, columns=columns, show="headings", height=min(n+2, 20))
+        
+        tree.heading("i", text="i")
+        for w in range(W + 1):
+            tree.heading(f"w={w}", text=f"{w}")
+            tree.column(f"w={w}", width=60, anchor="center")
+        tree.column("i", width=40, anchor="center")
+        
+        """Етап 8 (K-06): Візуалізація вибраних предметів"""
+        for i in range(n + 1):
+            row_values = [str(i)] + [str(dp[i][w]) for w in range(W + 1)]
+            item = tree.insert("", "end", values=row_values)
+            if i > 0 and (i-1) in selected:
+                tree.tag_configure(f"selected_{i}", background="#90EE90")
+                tree.item(item, tags=(f"selected_{i}",))
+
+        scrollbar = ttk.Scrollbar(self.table_frame, orient=tk.VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    """Етап 6 (K-05): Відновлення набору та виведення результату""" 
+    def display_result(self, selected, weights, values, max_value):
+        current_text = self.result_label.cget("text")
+        
+        if not selected:
+            items_text = "Жоден предмет не вибрано"
+            total_weight = 0
+        else:
+            items_lines = []
+            total_weight = 0
+            for idx in selected:
+                items_lines.append(f"Предмет {idx+1} (вага={weights[idx]}, цінність={values[idx]})")
+                total_weight += weights[idx]
+            items_text = "\n".join(items_lines)
+        
+        if current_text and "[WARNING]" in current_text:
+            full_text = current_text + "\n\n" + items_text
+        else:
+            full_text = items_text
+        
+        self.result_label.config(text=full_text)
+        self.max_value_label.config(text=f"Максимальна цінність: {max_value}\nЗагальна вага: {total_weight}")
+   
+    """ Повністю функціональний метод solve """
+    def solve(self):
+        n, W, weights, values = self.parse_input()
+        if n is None:
+            return
+        
+        method = self.method_var.get()
+        self.clear_table()
+        
+        self.result_label.config(text="")
+        self.max_value_label.config(text="")
+        
+        if method == "Brute Force (перебір)":
+            dp, max_value, selected = self.solve_bruteforce(weights, values, n, W)
+            self.result_label.config(text="[WARNING] Метод перебору не будує таблицю DP", foreground="orange")
+        elif method == "Recursive (рекурсія)":
+            dp, max_value, selected = self.solve_recursive(weights, values, n, W)
+            self.result_label.config(text="[WARNING] Рекурсивний метод не будує таблицю DP", foreground="orange")
+        elif method == "Dynamic Programming (DP)":
+            dp, max_value, selected = self.solve_DP(weights, values, n, W)
+            self.display_table(weights, values, dp, selected)
+            self.result_label.config(text=" Таблиця DP побудована", foreground="green")
+        elif method == "Greedy (жадібний)":
+            dp, max_value, selected = self.solve_greedy(weights, values, n, W)
+            self.result_label.config(text="[WARNING] Жадібний алгоритм не будує таблицю DP", foreground="orange")
+        elif method == "Branch and Bound (гілки та межі)":
+            dp, max_value, selected = self.solve_branch_bound(weights, values, n, W)
+            self.result_label.config(text="[WARNING] Метод гілок та меж не будує таблицю DP", foreground="orange")
+        else:
+            return
+        
+        self.display_result(selected, weights, values, max_value)       
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = KnapsackApp(root)
+    root.mainloop()
