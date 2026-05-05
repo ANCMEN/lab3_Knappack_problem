@@ -308,7 +308,89 @@ class AnimationController:
     def set_speed(self, speed):
         """Зміна швидкості"""
         speed_map = {"Повільна": 800, "Нормальна": 400, "Швидка": 150, "Дуже швидка": 50}
-        self.speed = speed_map.get(speed, 400)    
+        self.speed = speed_map.get(speed, 400) 
+          
+    """K-12: Анімація Brute Force"""
+        
+    def animate_bruteforce(self):
+        """Підготовка анімації для Brute Force"""
+        n = self.n_var.get()
+        self.animation_controller.total_steps = (1 << n)  # 2^n кроків
+        self.animation_controller.current_step = 0
+        self.animation_controller.is_running = True
+        
+        # Зберігаємо дані для анімації
+        self.bf_best_value = 0
+        self.bf_best_combination = []
+        self.bf_weights = None
+        self.bf_values = None
+        self.bf_n = n
+        self.bf_W = self.W_var.get()
+        
+        # Очищуємо Canvas
+        self.clear_animation_canvas()
+        
+        # Запускаємо анімацію
+        self.animation_controller.next_step()
+
+    def animate_step_bruteforce(self, mask):
+        """Один крок анімації Brute Force"""
+        n, W = self.bf_n, self.bf_W
+        weights, values = self.bf_weights, self.bf_values
+        
+        total_weight = 0
+        total_value = 0
+        current_items = []
+        
+        for i in range(n):
+            if mask >> i & 1:
+                total_weight += weights[i]
+                total_value += values[i]
+                current_items.append(i+1)
+        
+        # Оновлюємо Canvas
+        self.update_animation_canvas({
+            "mask": bin(mask),
+            "mask_dec": mask,
+            "items": current_items,
+            "weight": total_weight,
+            "value": total_value,
+            "best_value": self.bf_best_value,
+            "best_items": [i+1 for i in self.bf_best_combination]
+        })
+        
+        # Оновлюємо прогрес
+        self.update_progress(mask + 1, self.animation_controller.total_steps)
+        
+        # Оновлюємо найкращий результат
+        if total_weight <= W and total_value > self.bf_best_value:
+            self.bf_best_value = total_value
+            self.bf_best_combination = [i for i in range(n) if (mask >> i) & 1]
+            # Візуально виділити новий найкращий набір
+            self.highlight_best_set()
+
+    def render_bruteforce_frame(self, data):
+        """Відображення одного кадру Brute Force"""
+        canvas = self.animation_canvas
+        canvas.delete("all")
+        
+        width, height = 600, 150
+        canvas.config(width=width, height=height)
+        
+        # Заголовок
+        canvas.create_text(10, 15, anchor="nw", text=f"Маска: {data['mask']} ({data['mask_dec']})", font=("Arial", 12, "bold"))
+        canvas.create_text(10, 40, anchor="nw", text=f"Поточні предмети: {data['items']}")
+        canvas.create_text(10, 65, anchor="nw", text=f"Вага: {data['weight']} / {self.bf_W}")
+        canvas.create_text(10, 90, anchor="nw", text=f"Цінність: {data['value']}")
+        
+        # Найкращий результат
+        canvas.create_text(300, 40, anchor="nw", text=f"Найкраща цінність: {data['best_value']}", fill="green")
+        canvas.create_text(300, 65, anchor="nw", text=f"Найкращий набір: {data['best_items']}", fill="green")
+        
+        # Прогрес-бар
+        progress = data['mask_dec'] / self.animation_controller.total_steps
+        canvas.create_rectangle(10, 120, 10 + 580 * progress, 140, fill="blue", outline="")
+        canvas.create_text(300, 130, text=f"{int(progress*100)}%", font=("Arial", 10)) 
     
     """Етап 5 (K-04): Відображення таблиці DP"""    
 
