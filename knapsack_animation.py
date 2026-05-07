@@ -391,6 +391,104 @@ class AnimationController:
         progress = data['mask_dec'] / self.animation_controller.total_steps
         canvas.create_rectangle(10, 120, 10 + 580 * progress, 140, fill="blue", outline="")
         canvas.create_text(300, 130, text=f"{int(progress*100)}%", font=("Arial", 10)) 
+    """K-13: Анімація DP з покроковим заповненням таблиці"""
+    def animate_DP(self):
+        """Підготовка анімації для DP"""
+        n, W, weights, values = self.parse_input()
+        if n is None:
+            return
+        
+        self.dp_weights = weights
+        self.dp_values = values
+        self.dp_n = n
+        self.dp_W = W
+        
+        # Ініціалізуємо таблицю DP
+        self.dp_table = [[0] * (W + 1) for _ in range(n + 1)]
+        
+        # Кроки: для кожної клітинки (i, w)
+        self.animation_controller.total_steps = (n + 1) * (W + 1)
+        self.animation_controller.current_step = 0
+        
+        self.dp_i = 1
+        self.dp_w = 0
+        
+        self.clear_animation_canvas()
+        self.display_table(self.dp_weights, self.dp_values, self.dp_table, [])
+        
+        self.animation_controller.start()
+
+def animate_step_DP(self):
+    """Один крок анімації DP (заповнення однієї клітинки)"""
+    i, w = self.dp_i, self.dp_w
+    weights, values = self.dp_weights, self.dp_values
+    W = self.dp_W
+    
+    if i > self.dp_n:
+        # Анімація завершена — показуємо результат
+        self.finish_DP_animation()
+        return
+    
+    # Обчислюємо значення для dp[i][w]
+    if weights[i-1] <= w:
+        self.dp_table[i][w] = max(self.dp_table[i-1][w], 
+                                   self.dp_table[i-1][w - weights[i-1]] + values[i-1])
+    else:
+        self.dp_table[i][w] = self.dp_table[i-1][w]
+    
+    # Оновлюємо відображення таблиці з підсвіткою активної клітинки
+    self.update_table_with_highlight(i, w)
+    
+    self.update_progress(self.animation_controller.current_step, self.animation_controller.total_steps)
+    
+    # Переходимо до наступної клітинки
+    if w < W:
+        self.dp_w += 1
+    else:
+        self.dp_i += 1
+        self.dp_w = 0
+
+def update_table_with_highlight(self, active_i, active_w):
+    """Відображення таблиці з виділенням активної клітинки"""
+    for widget in self.table_frame.winfo_children():
+        widget.destroy()
+    
+    n, W = self.dp_n, self.dp_W
+    columns = ["i"] + [f"w={w}" for w in range(W + 1)]
+    tree = ttk.Treeview(self.table_frame, columns=columns, show="headings", height=min(n+2, 20))
+    
+    tree.heading("i", text="i")
+    for w in range(W + 1):
+        tree.heading(f"w={w}", text=f"{w}")
+        tree.column(f"w={w}", width=50, anchor="center")
+    tree.column("i", width=40, anchor="center")
+    
+    for i in range(n + 1):
+        row_values = [str(i)] + [str(self.dp_table[i][w]) for w in range(W + 1)]
+        item = tree.insert("", "end", values=row_values)
+        
+        # Виділяємо активну клітинку червоним
+        if i == active_i:
+            tree.tag_configure("active_cell", background="#ffcccc")
+            tree.item(item, tags=("active_cell",))
+        # Виділяємо вибрані предмети зеленим (після завершення)
+        elif active_i == -1 and i > 0 and (i-1) in self.selected_items:
+            tree.tag_configure(f"selected_{i}", background="#90EE90")
+            tree.item(item, tags=(f"selected_{i}",))
+    
+    scrollbar = ttk.Scrollbar(self.table_frame, orient=tk.VERTICAL, command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+    tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    
+    # Для підсвітки конкретної комірки додаємо додатковий рядок
+    if active_i >= 0:
+        self.highlight_cell(tree, active_i, active_w)
+
+def highlight_cell(self, tree, i, w):
+    """Підсвітка конкретної комірки в Treeview (складно через обмеження Treeview)"""
+    # Альтернатива: показувати активну комірку в окремому Canvas
+    self.show_active_cell_in_canvas(i, w)
     
     """Етап 5 (K-04): Відображення таблиці DP"""    
 
