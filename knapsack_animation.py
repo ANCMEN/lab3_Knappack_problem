@@ -11,7 +11,14 @@ class KnapsackApp:
         self.W_var = tk.IntVar(value=25)
         self.weights_var = tk.StringVar(value="8,1,4,7,8")
         self.values_var = tk.StringVar(value="9,9,15,9,11")
+        self.method_var = tk.StringVar(value="Dynamic Programming (DP)")
+    
+        # Ініціалізація контролера анімації
+        self.animation_controller = AnimationController(self)
         
+        # Змінні для анімації
+        self.selected_items = []
+        self.dp_table = []
         self.setup_ui()
     
     def setup_ui(self):
@@ -489,6 +496,53 @@ def highlight_cell(self, tree, i, w):
     """Підсвітка конкретної комірки в Treeview (складно через обмеження Treeview)"""
     # Альтернатива: показувати активну комірку в окремому Canvas
     self.show_active_cell_in_canvas(i, w)
+
+    """K-14: Панель керування анімацією (Play/Pause/Step/Speed)"""
+def setup_animation_panel(self, parent):
+    """Створення панелі керування анімацією"""
+    panel = ttk.LabelFrame(parent, text="Керування анімацією", padding="5")
+    panel.pack(fill=tk.X, pady=5)
+    
+    # Canvas для візуалізації
+    self.animation_canvas = tk.Canvas(panel, height=150, bg="white", relief=tk.SUNKEN, bd=1)
+    self.animation_canvas.pack(fill=tk.X, pady=5, padx=5)
+    
+    # Кнопки керування
+    btn_frame = ttk.Frame(panel)
+    btn_frame.pack()
+    
+    ttk.Button(btn_frame, text=" Пауза", command=self.animation_controller.pause).pack(side=tk.LEFT, padx=2)
+    ttk.Button(btn_frame, text=" Старт", command=self.animation_controller.start).pack(side=tk.LEFT, padx=2)
+    ttk.Button(btn_frame, text=" Крок", command=self.animation_controller.next_step).pack(side=tk.LEFT, padx=2)
+    ttk.Button(btn_frame, text=" Скинути", command=self.reset_animation).pack(side=tk.LEFT, padx=2)
+    
+    # Вибір швидкості
+    ttk.Label(btn_frame, text="Швидкість:").pack(side=tk.LEFT, padx=(10, 2))
+    self.speed_var = tk.StringVar(value="Нормальна")
+    speed_combo = ttk.Combobox(btn_frame, textvariable=self.speed_var, 
+                                values=["Повільна", "Нормальна", "Швидка", "Дуже швидка"], 
+                                width=12, state="readonly")
+    speed_combo.pack(side=tk.LEFT, padx=2)
+    speed_combo.bind("<<ComboboxSelected>>", self.change_animation_speed)
+    
+    # Прогрес-бар
+    self.progress_var = tk.IntVar(value=0)
+    self.progress_bar = ttk.Progressbar(panel, variable=self.progress_var, maximum=100, length=400)
+    self.progress_bar.pack(pady=5)
+    
+    self.status_label = ttk.Label(panel, text="Готовий до анімації")
+    self.status_label.pack()
+
+def change_animation_speed(self, event=None):
+    """Зміна швидкості анімації"""
+    self.animation_controller.set_speed(self.speed_var.get())
+
+def update_progress(self, current, total):
+    """Оновлення прогрес-бару"""
+    percent = int(current / total * 100) if total > 0 else 0
+    self.progress_var.set(percent)
+    self.status_label.config(text=f"Крок {current} з {total} ({percent}%)")
+
     
     """Етап 5 (K-04): Відображення таблиці DP"""    
 
@@ -544,37 +598,37 @@ def highlight_cell(self, tree, i, w):
         self.max_value_label.config(text=f"Максимальна цінність: {max_value}\nЗагальна вага: {total_weight}")
    
     """ Повністю функціональний метод solve """
-    def solve(self):
+    def solve(self, use_animation=True):
+        """Головний метод розв'язання з підтримкою анімації"""
         n, W, weights, values = self.parse_input()
         if n is None:
             return
         
         method = self.method_var.get()
-        self.clear_table()
+        self.selected_items = []
         
-        self.result_label.config(text="")
-        self.max_value_label.config(text="")
-        
-        if method == "Brute Force (перебір)":
-            dp, max_value, selected = self.solve_bruteforce(weights, values, n, W)
-            self.result_label.config(text="[WARNING] Метод перебору не будує таблицю DP", foreground="orange")
-        elif method == "Recursive (рекурсія)":
-            dp, max_value, selected = self.solve_recursive(weights, values, n, W)
-            self.result_label.config(text="[WARNING] Рекурсивний метод не будує таблицю DP", foreground="orange")
-        elif method == "Dynamic Programming (DP)":
-            dp, max_value, selected = self.solve_DP(weights, values, n, W)
-            self.display_table(weights, values, dp, selected)
-            self.result_label.config(text=" Таблиця DP побудована", foreground="green")
-        elif method == "Greedy (жадібний)":
-            dp, max_value, selected = self.solve_greedy(weights, values, n, W)
-            self.result_label.config(text="[WARNING] Жадібний алгоритм не будує таблицю DP", foreground="orange")
-        elif method == "Branch and Bound (гілки та межі)":
-            dp, max_value, selected = self.solve_branch_bound(weights, values, n, W)
-            self.result_label.config(text="[WARNING] Метод гілок та меж не будує таблицю DP", foreground="orange")
+        if use_animation:
+            # Запускаємо анімацію залежно від вибраного методу
+            self.animation_controller.stop()
+            
+            if method == "Brute Force (перебір)":
+                self.bf_weights, self.bf_values = weights, values
+                self.bf_n, self.bf_W = n, W
+                self.animate_bruteforce()
+            elif method == "Dynamic Programming (DP)":
+                self.animate_DP()
+            elif method == "Recursive (рекурсія)":
+                self.animate_recursive()
+            elif method == "Greedy (жадібний)":
+                self.animate_greedy()
+            elif method == "Branch and Bound (гілки та межі)":
+                self.animate_branch_bound()
+            else:
+                # Якщо анімація не підтримується — просто розв'язуємо
+                self.solve_without_animation()
         else:
-            return
-        
-        self.display_result(selected, weights, values, max_value)       
+            # Розв'язання без анімації (швидкий режим)
+            self.solve_without_animation()       
 
 if __name__ == "__main__":
     root = tk.Tk()
