@@ -489,53 +489,6 @@ def highlight_cell(self, tree, i, w):
     """Підсвітка конкретної комірки в Treeview (складно через обмеження Treeview)"""
     # Альтернатива: показувати активну комірку в окремому Canvas
     self.show_active_cell_in_canvas(i, w)
-
-    """K-14: Панель керування анімацією (Play/Pause/Step/Speed)"""
-def setup_animation_panel(self, parent):
-    """Створення панелі керування анімацією"""
-    panel = ttk.LabelFrame(parent, text="Керування анімацією", padding="5")
-    panel.pack(fill=tk.X, pady=5)
-    
-    # Canvas для візуалізації
-    self.animation_canvas = tk.Canvas(panel, height=150, bg="white", relief=tk.SUNKEN, bd=1)
-    self.animation_canvas.pack(fill=tk.X, pady=5, padx=5)
-    
-    # Кнопки керування
-    btn_frame = ttk.Frame(panel)
-    btn_frame.pack()
-    
-    ttk.Button(btn_frame, text="⏸ Пауза", command=self.animation_controller.pause).pack(side=tk.LEFT, padx=2)
-    ttk.Button(btn_frame, text="▶ Старт", command=self.animation_controller.start).pack(side=tk.LEFT, padx=2)
-    ttk.Button(btn_frame, text="⏩ Крок", command=self.animation_controller.next_step).pack(side=tk.LEFT, padx=2)
-    ttk.Button(btn_frame, text="🔄 Скинути", command=self.reset_animation).pack(side=tk.LEFT, padx=2)
-    
-    # Вибір швидкості
-    ttk.Label(btn_frame, text="Швидкість:").pack(side=tk.LEFT, padx=(10, 2))
-    self.speed_var = tk.StringVar(value="Нормальна")
-    speed_combo = ttk.Combobox(btn_frame, textvariable=self.speed_var, 
-                                values=["Повільна", "Нормальна", "Швидка", "Дуже швидка"], 
-                                width=12, state="readonly")
-    speed_combo.pack(side=tk.LEFT, padx=2)
-    speed_combo.bind("<<ComboboxSelected>>", self.change_animation_speed)
-    
-    # Прогрес-бар
-    self.progress_var = tk.IntVar(value=0)
-    self.progress_bar = ttk.Progressbar(panel, variable=self.progress_var, maximum=100, length=400)
-    self.progress_bar.pack(pady=5)
-    
-    self.status_label = ttk.Label(panel, text="Готовий до анімації")
-    self.status_label.pack()
-
-def change_animation_speed(self, event=None):
-    """Зміна швидкості анімації"""
-    self.animation_controller.set_speed(self.speed_var.get())
-
-def update_progress(self, current, total):
-    """Оновлення прогрес-бару"""
-    percent = int(current / total * 100) if total > 0 else 0
-    self.progress_var.set(percent)
-    self.status_label.config(text=f"Крок {current} з {total} ({percent}%)")
-
     
     """Етап 5 (K-04): Відображення таблиці DP"""    
 
