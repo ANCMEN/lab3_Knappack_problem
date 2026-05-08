@@ -718,6 +718,115 @@ def _finish_greedy_animation(self):
     else:
         self.update_animation_status(f"Жадібний алгоритм знайшов оптимальне рішення!")
 
+    """K-17: Анімація Branch and Bound"""
+def animate_branch_bound(self):
+    """Підготовка анімації для методу гілок та меж"""
+    n, W, weights, values = self.parse_input()
+    if n is None:
+        return
+    
+    self.bb_weights = weights
+    self.bb_values = values
+    self.bb_n = n
+    self.bb_W = W
+    self.bb_best_value = 0
+    self.bb_best_combination = []
+    
+    # Сортуємо за спаданням цінність/вага
+    self.bb_items = sorted([(values[i], weights[i], i+1, values[i]/weights[i] if weights[i]!=0 else 0) 
+                            for i in range(n)], key=lambda x: x[3], reverse=True)
+    self.bb_stack = [(0, 0, 0, [])]  # (i, current_w, current_v, taken)
+    self.bb_pruned = 0
+    
+    self.animation_controller.total_steps = 2 ** n
+    self.animation_controller.current_step = 0
+    self.animation_controller.animation_type = "branchbound"
+    
+    self.clear_animation_canvas()
+    self.animation_controller.start()
+
+def animate_step_branch_bound(self):
+    """Один крок анімації Branch and Bound"""
+    if not self.bb_stack:
+        self._finish_bb_animation()
+        return
+    
+    i, current_w, current_v, taken = self.bb_stack.pop()
+    
+    # Відображаємо поточний стан
+    self._render_bb_frame(i, current_w, current_v, taken)
+    
+    if i == self.bb_n:
+        if current_v > self.bb_best_value:
+            self.bb_best_value = current_v
+            self.bb_best_combination = taken.copy()
+        return
+    
+    # Обчислюємо верхню межу
+    bound_val = self._calculate_bound(i, current_w, current_v)
+    
+    # Якщо межа менша за найкращий результат — відсікаємо
+    if bound_val <= self.bb_best_value:
+        self.bb_pruned += 1
+        self._render_bb_prune(i, current_w, current_v, bound_val)
+        return
+    
+    # Додаємо гілки: спочатку "взяти", потім "не брати" (для кращого відсікання)
+    v, w, idx, ratio = self.bb_items[i]
+    
+    # Взяти (якщо влазить)
+    if current_w + w <= self.bb_W:
+        new_taken = taken.copy()
+        new_taken.append(idx)
+        self.bb_stack.append((i+1, current_w + w, current_v + v, new_taken))
+    
+    # Не брати
+    self.bb_stack.append((i+1, current_w, current_v, taken.copy()))
+
+def _calculate_bound(self, i, current_w, current_v):
+    """Обчислення верхньої межі"""
+    remaining_w = self.bb_W - current_w
+    bound = current_v
+    j = i
+    while j < self.bb_n and self.bb_items[j][1] <= remaining_w:
+        bound += self.bb_items[j][0]
+        remaining_w -= self.bb_items[j][1]
+        j += 1
+    if j < self.bb_n:
+        bound += (remaining_w / self.bb_items[j][1]) * self.bb_items[j][0]
+    return bound
+
+def _render_bb_frame(self, i, current_w, current_v, taken):
+    """Відображення стану Branch and Bound"""
+    canvas = self.animation_canvas
+    canvas.delete("all")
+    
+    canvas.create_text(10, 15, anchor="nw", text=f"Рівень {i+1} з {self.bb_n}", font=("Arial", 10, "bold"))
+    canvas.create_text(10, 40, anchor="nw", text=f"Поточна вага: {current_w}")
+    canvas.create_text(10, 65, anchor="nw", text=f"Поточна цінність: {current_v}")
+    canvas.create_text(10, 90, anchor="nw", text=f"Взяті предмети: {taken}")
+    
+    bound_val = self._calculate_bound(i, current_w, current_v)
+    canvas.create_text(300, 40, anchor="nw", text=f"Верхня межа: {bound_val:.1f}")
+    canvas.create_text(300, 65, anchor="nw", text=f"Найкраща цінність: {self.bb_best_value}", fill="green")
+    canvas.create_text(300, 90, anchor="nw", text=f"Відсічено гілок: {self.bb_pruned}", fill="orange")
+
+def _render_bb_prune(self, i, current_w, current_v, bound_val):
+    """Показує відсічену гілку"""
+    canvas = self.animation_canvas
+    canvas.delete("all")
+    
+    canvas.create_text(10, 30, anchor="nw", text=f"❌ ГІЛКУ ВІДСІЧЕНО!", font=("Arial", 12, "bold"), fill="red")
+    canvas.create_text(10, 60, anchor="nw", text=f"Верхня межа ({bound_val:.1f}) ≤ найкраща цінність ({self.bb_best_value})")
+    canvas.create_text(10, 85, anchor="nw", text=f"Ця гілка не може покращити результат")
+
+def _finish_bb_animation(self):
+    """Завершення анімації Branch and Bound"""
+    self.result_label.config(text=f"Найкращий набір: {self.bb_best_combination}", foreground="green")
+    self.max_value_label.config(text=f"Максимальна цінність: {self.bb_best_value}")
+    self.update_animation_status(f"Анімація завершена! Відсічено гілок: {self.bb_pruned}")
+
+
     """K-14: Панель керування анімацією (Play/Pause/Step/Speed)"""
 def setup_animation_panel(self, parent):
     """Створення панелі керування анімацією"""
