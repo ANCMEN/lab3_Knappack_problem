@@ -435,54 +435,101 @@ class AnimationController:
         # Показуємо початкову таблицю
         self._display_dp_table_with_highlight(0, 0)
             
-        
 
-def _dp_generator(self):
-    n, W, weights, values = self.parse_input()
-    if n is None:
+def animate_step_DP(self):
+    """Один крок анімації DP"""
+    i, w = self.dp_i, self.dp_w
+    weights, values = self.dp_weights, self.dp_values
+    n, W = self.dp_n, self.dp_W
+    
+    if i > n:
+        self._finish_dp_animation()
         return
     
-    self.dp_weights = weights
-    self.dp_values = values
-    self.dp_n = n
-    self.dp_W = W
+    # Обчислюємо dp[i][w]
+    if weights[i-1] <= w:
+        self.dp_table[i][w] = max(self.dp_table[i-1][w], 
+                                   self.dp_table[i-1][w - weights[i-1]] + values[i-1])
+    else:
+        self.dp_table[i][w] = self.dp_table[i-1][w]
     
-    # Ініціалізуємо таблицю DP
-    self.dp_table = [[0] * (W + 1) for _ in range(n + 1)]
-    self.dp_i = 1
-    self.dp_w = 0
+    # Оновлюємо відображення
+    self._display_dp_table_with_highlight(i, w)
     
-    # Всього кроків = (n+1) * (W+1)
-    self.animation_controller.total_steps = (n + 1) * (W + 1)
-    self.animation_controller.current_step = 0
-    self.animation_controller.animation_generator = self._dp_generator()
+    # Оновлюємо прогрес
+    current_step = (i-1) * (W+1) + w + 1
+    self.update_progress(current_step, self.animation_controller.total_steps)
     
-    # Очищуємо попереднє відображення
+    # Показуємо формулу в Canvas
+    self._show_dp_formula(i, w)
+    
+    # Переходимо до наступної клітинки
+    if w < W:
+        self.dp_w += 1
+    else:
+        self.dp_i += 1
+        self.dp_w = 0
+
+def _display_dp_table_with_highlight(self, active_i, active_w):
+    """Відображення таблиці DP з підсвіткою"""
     for widget in self.table_frame.winfo_children():
         widget.destroy()
     
-    self.animation_controller.start()
-
-def _dp_generator(self):
-    """Генератор для покрокового заповнення таблиці DP"""
     n, W = self.dp_n, self.dp_W
+    if n == 0 or W == 0:
+        return
+    
+    columns = ["i"] + [str(w) for w in range(W + 1)]
+    tree = ttk.Treeview(self.table_frame, columns=columns, show="headings", height=min(n+2, 15))
+    
+    tree.heading("i", text="i")
+    for w in range(W + 1):
+        tree.heading(str(w), text=str(w))
+        tree.column(str(w), width=45, anchor="center")
+    tree.column("i", width=40, anchor="center")
+    
+    for i in range(n + 1):
+        row_values = [str(i)] + [str(self.dp_table[i][w]) for w in range(W + 1)]
+        item = tree.insert("", "end", values=row_values)
+        
+        # Підсвітка активної клітинки
+        if active_i >= 0 and i == active_i:
+            tree.tag_configure("active_row", background="#ffffcc")
+            tree.item(item, tags=("active_row",))
+    
+    scrollbar = ttk.Scrollbar(self.table_frame, orient=tk.VERTICAL, command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+    tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+def _show_dp_formula(self, i, w):
+    """Показує формулу для поточної комірки в Canvas"""
+    canvas = self.animation_canvas
+    canvas.delete("all")
+    
     weights, values = self.dp_weights, self.dp_values
     
-    for i in range(1, n + 1):
-        for w in range(W + 1):
-            # Обчислюємо dp[i][w]
-            if weights[i-1] <= w:
-                self.dp_table[i][w] = max(self.dp_table[i-1][w], 
-                                           self.dp_table[i-1][w - weights[i-1]] + values[i-1])
-            else:
-                self.dp_table[i][w] = self.dp_table[i-1][w]
-            
-            # Відображаємо таблицю з підсвіткою активної комірки
-            self._display_table_with_highlight(i, w)
-            
-            yield  # Пауза для анімації
+    if i <= 0:
+        canvas.create_text(10, 15, anchor="nw", text="База: dp[0][w] = 0", font=("Arial", 10))
+        return
     
-    # Анімація завершена — показуємо результат
+    formula = f"dp[{i}][{w}] = max(dp[{i-1}][{w}], "
+    if w >= weights[i-1]:
+        formula += f"dp[{i-1}][{w - weights[i-1]}] + {values[i-1]})"
+        formula += f"\n= max({self.dp_table[i-1][w]}, {self.dp_table[i-1][w - weights[i-1]]} + {values[i-1]})"
+    else:
+        formula += f"dp[{i-1}][{w}] (предмет не влазить))"
+    
+    result = f"= {self.dp_table[i][w]}"
+    
+    canvas.create_text(10, 15, anchor="nw", text=formula, font=("Arial", 9))
+    canvas.create_text(10, 70, anchor="nw", text=result, font=("Arial", 10, "bold"), fill="blue")
+
+def _finish_dp_animation(self):
+    """Завершення анімації DP"""
+    n, W = self.dp_n, self.dp_W
+    weights = self.dp_weights
+    
     max_value = self.dp_table[n][W]
     
     # Відновлення вибраних предметів
@@ -493,45 +540,10 @@ def _dp_generator(self):
             selected.append(i-1)
             w -= weights[i-1]
     selected.reverse()
-    self.selected_items = selected
     
-    self.display_result(selected, weights, values, max_value)
-    self._display_table_with_highlight(-1, -1)  # Прибираємо підсвітку
-    self.update_animation_status("✅ Анімація DP завершена!")
-
-def _display_table_with_highlight(self, active_i, active_w):
-    """Відображення таблиці з виділенням активної комірки"""
-    for widget in self.table_frame.winfo_children():
-        widget.destroy()
-    
-    n, W = self.dp_n, self.dp_W
-    columns = ["i"] + [f"{w}" for w in range(W + 1)]
-    tree = ttk.Treeview(self.table_frame, columns=columns, show="headings", height=min(n+2, 15))
-    
-    tree.heading("i", text="i")
-    for w in range(W + 1):
-        tree.heading(f"{w}", text=f"{w}")
-        tree.column(f"{w}", width=45, anchor="center")
-    tree.column("i", width=40, anchor="center")
-    
-    for i in range(n + 1):
-        row_values = [str(i)] + [str(self.dp_table[i][w]) for w in range(W + 1)]
-        item = tree.insert("", "end", values=row_values)
-        
-        # Підсвітка активної комірки
-        if i == active_i and active_w >= 0:
-            tree.tag_configure("active_cell", background="#ffcccc")
-            tree.item(item, tags=("active_cell",))
-        
-        # Підсвітка вибраних предметів (після завершення)
-        if active_i == -1 and i > 0 and hasattr(self, 'selected_items') and (i-1) in self.selected_items:
-            tree.tag_configure(f"selected_{i}", background="#90EE90")
-            tree.item(item, tags=(f"selected_{i}",))
-    
-    scrollbar = ttk.Scrollbar(self.table_frame, orient=tk.VERTICAL, command=tree.yview)
-    tree.configure(yscrollcommand=scrollbar.set)
-    tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    self.display_result(selected, self.dp_weights, self.dp_values, max_value)
+    self._display_dp_table_with_highlight(-1, -1)
+    self.update_animation_status(f"Анімація DP завершена! Макс. цінність: {max_value}")
 
     """K-14: Панель керування анімацією (Play/Pause/Step/Speed)"""
 def setup_animation_panel(self, parent):
