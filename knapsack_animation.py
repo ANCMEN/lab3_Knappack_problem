@@ -15,6 +15,7 @@ class KnapsackApp:
     
         # Ініціалізація контролера анімації
         self.animation_controller = AnimationController(self)
+        self.animation_controller.animation_type = None
         
         # Змінні для анімації
         self.selected_items = []
@@ -979,32 +980,29 @@ def update_progress(self, current, total):
         n, W, weights, values = self.parse_input()
         if n is None:
             return
-        
-        method = self.method_var.get()
-        self.selected_items = []
-        
-        if use_animation:
-            # Запускаємо анімацію залежно від вибраного методу
-            self.animation_controller.stop()
-            
-            if method == "Brute Force (перебір)":
-                self.bf_weights, self.bf_values = weights, values
-                self.bf_n, self.bf_W = n, W
-                self.animate_bruteforce()
-            elif method == "Dynamic Programming (DP)":
-                self.animate_DP()
-            elif method == "Recursive (рекурсія)":
-                self.animate_recursive()
-            elif method == "Greedy (жадібний)":
-                self.animate_greedy()
-            elif method == "Branch and Bound (гілки та межі)":
-                self.animate_branch_bound()
-            else:
-                # Якщо анімація не підтримується — просто розв'язуємо
-                self.solve_without_animation()
-        else:
-            # Розв'язання без анімації (швидкий режим)
-            self.solve_without_animation()       
+    
+    method = self.method_var.get()
+    self.selected_items = []
+    
+    # Зупиняємо попередню анімацію
+    self.animation_controller.stop()
+    self.clear_table()
+    
+    # Встановлюємо тип анімації та запускаємо
+    animation_map = {
+        "Brute Force (перебір)": ("bruteforce", self.animate_bruteforce),
+        "Recursive (рекурсія)": ("recursive", self.animate_recursive),
+        "Dynamic Programming (DP)": ("dp", self.animate_DP),
+        "Greedy (жадібний)": ("greedy", self.animate_greedy),
+        "Branch and Bound (гілки та межі)": ("branchbound", self.animate_branch_bound)
+    }
+    
+    if method in animation_map:
+        anim_type, anim_func = animation_map[method]
+        self.animation_controller.animation_type = anim_type
+        anim_func()
+    else:
+        messagebox.showerror("Помилка", f"Невідомий метод: {method}")       
 
 if __name__ == "__main__":
     root = tk.Tk()
