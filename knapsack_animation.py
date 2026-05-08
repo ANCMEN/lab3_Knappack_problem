@@ -619,6 +619,105 @@ def _finish_rec_animation(self):
     self.max_value_label.config(text=f"Максимальна цінність: {self.rec_best_value}")
     self.update_animation_status(f"Анімація завершена! Найкраща цінність: {self.rec_best_value}")
 
+    """K-15: Анімація Greedy"""
+    def animate_greedy(self):
+      """Підготовка анімації для жадібного алгоритму"""
+    n, W, weights, values = self.parse_input()
+    if n is None:
+        return
+    
+    self.greedy_weights = weights
+    self.greedy_values = values
+    self.greedy_n = n
+    self.greedy_W = W
+    
+    # Створюємо список з коефіцієнтами
+    self.greedy_items = [(values[i], weights[i], i+1, values[i]/weights[i] if weights[i]!=0 else 0) 
+                         for i in range(n)]
+    # Сортуємо за спаданням співвідношення
+    self.greedy_items.sort(key=lambda x: x[3], reverse=True)
+    
+    self.greedy_index = 0
+    self.greedy_selected = []
+    self.greedy_total_weight = 0
+    self.greedy_total_value = 0
+    self.greedy_sorted_shown = False
+    
+    self.animation_controller.total_steps = n + 2  # сортування + n кроків вибору
+    self.animation_controller.current_step = 0
+    self.animation_controller.animation_type = "greedy"
+    
+    self.clear_animation_canvas()
+    self.animation_controller.start()
+
+def animate_step_greedy(self):
+    """Один крок анімації жадібного алгоритму"""
+    if not self.greedy_sorted_shown:
+        # Показуємо відсортований список
+        self._render_greedy_sorted()
+        self.greedy_sorted_shown = True
+        self.update_progress(1, self.animation_controller.total_steps)
+        return
+    
+    if self.greedy_index >= self.greedy_n:
+        self._finish_greedy_animation()
+        return
+    
+    v, w, idx, ratio = self.greedy_items[self.greedy_index]
+    
+    # Перевіряємо, чи влазить предмет
+    if self.greedy_total_weight + w <= self.greedy_W:
+        self.greedy_selected.append(idx)
+        self.greedy_total_weight += w
+        self.greedy_total_value += v
+        self._render_greedy_step(idx, w, v, ratio, taken=True)
+    else:
+        self._render_greedy_step(idx, w, v, ratio, taken=False)
+    
+    self.greedy_index += 1
+    self.update_progress(self.greedy_index + 1, self.animation_controller.total_steps)
+
+def _render_greedy_sorted(self):
+    """Показує відсортований список предметів"""
+    canvas = self.animation_canvas
+    canvas.delete("all")
+    
+    canvas.create_text(10, 15, anchor="nw", text="Сортування за співвідношенням цінність/вага:", font=("Arial", 10, "bold"))
+    
+    y = 40
+    for i, (v, w, idx, ratio) in enumerate(self.greedy_items):
+        canvas.create_text(20, y, anchor="nw", text=f"{i+1}. Предмет {idx}: вага={w}, цінність={v}, коеф={ratio:.2f}")
+        y += 25
+
+def _render_greedy_step(self, idx, w, v, ratio, taken):
+    """Показує крок вибору предмета"""
+    canvas = self.animation_canvas
+    canvas.delete("all")
+    
+    canvas.create_text(10, 15, anchor="nw", text=f"Розглядаємо предмет {idx}", font=("Arial", 10, "bold"))
+    canvas.create_text(10, 40, anchor="nw", text=f"Вага: {w}, Цінність: {v}, Коефіцієнт: {ratio:.2f}")
+    
+    if taken:
+        canvas.create_text(10, 65, anchor="nw", text=f"Беремо! Вага в рюкзаку: {self.greedy_total_weight}/{self.greedy_W}", fill="green")
+        canvas.create_text(10, 90, anchor="nw", text=f"Поточна цінність: {self.greedy_total_value}")
+    else:
+        canvas.create_text(10, 65, anchor="nw", text=f"Не влазить! Вага {self.greedy_total_weight}+{w} > {self.greedy_W}", fill="red")
+    
+    canvas.create_text(300, 40, anchor="nw", text=f"Взяті предмети: {self.greedy_selected}", fill="green")
+    canvas.create_text(300, 65, anchor="nw", text=f"Загальна вага: {self.greedy_total_weight}")
+
+def _finish_greedy_animation(self):
+    """Завершення анімації жадібного алгоритму"""
+    self.result_label.config(text=f"Жадібний алгоритм (не завжди оптимальний)\nНабір: {self.greedy_selected}", foreground="orange")
+    self.max_value_label.config(text=f"Цінність: {self.greedy_total_value}, Вага: {self.greedy_total_weight}")
+    
+    # Показуємо порівняння з оптимальним (якщо потрібно)
+    _, optimal_value, _ = self.solve_DP(self.greedy_weights, self.greedy_values, self.greedy_n, self.greedy_W)
+    if optimal_value > self.greedy_total_value:
+        self.update_animation_status(f"Жадібний алгоритм дав {self.greedy_total_value}, а оптимально {optimal_value}")
+    else:
+        self.update_animation_status(f"Жадібний алгоритм знайшов оптимальне рішення!")
+
     """K-14: Панель керування анімацією (Play/Pause/Step/Speed)"""
 def setup_animation_panel(self, parent):
     """Створення панелі керування анімацією"""
