@@ -545,6 +545,80 @@ def _finish_dp_animation(self):
     self._display_dp_table_with_highlight(-1, -1)
     self.update_animation_status(f"Анімація DP завершена! Макс. цінність: {max_value}")
 
+    """K16: Створення Recursive анімації """
+    def animate_recursive(self):
+       """Підготовка анімації для рекурсивного методу"""
+    n, W, weights, values = self.parse_input()
+    if n is None:
+        return
+    
+    self.rec_weights = weights
+    self.rec_values = values
+    self.rec_n = n
+    self.rec_W = W
+    self.rec_best_value = 0
+    self.rec_best_combination = []
+    self.rec_stack = [(0, W, [], 0)]  # (i, remaining_w, taken, current_value)
+    self.rec_visited = set()
+    
+    self.animation_controller.total_steps = 2 ** n  # максимум
+    self.animation_controller.current_step = 0
+    self.animation_controller.animation_type = "recursive"
+    
+    self.clear_animation_canvas()
+    self.animation_controller.start()
+
+def animate_step_recursive(self):
+    """Один крок анімації рекурсивного методу"""
+    if not self.rec_stack:
+        self._finish_rec_animation()
+        return
+    
+    i, remaining_w, taken, current_value = self.rec_stack.pop()
+    
+    # Відображаємо поточний стан
+    self._render_rec_frame(i, remaining_w, taken, current_value)
+    
+    if i == self.rec_n:
+        if current_value > self.rec_best_value:
+            self.rec_best_value = current_value
+            self.rec_best_combination = [x+1 for x in taken]
+        self.update_progress(self.animation_controller.current_step + 1, self.animation_controller.total_steps)
+        return
+    
+    # Додаємо гілки: не брати, потім брати (щоб спочатку показати "не брати")
+    # Не брати
+    self.rec_stack.append((i+1, remaining_w, taken.copy(), current_value))
+    # Взяти (якщо влазить)
+    if self.rec_weights[i] <= remaining_w:
+        new_taken = taken.copy()
+        new_taken.append(i)
+        self.rec_stack.append((i+1, remaining_w - self.rec_weights[i], new_taken, 
+                               current_value + self.rec_values[i]))
+
+def _render_rec_frame(self, i, remaining_w, taken, current_value):
+    """Відображення стану рекурсії"""
+    canvas = self.animation_canvas
+    canvas.delete("all")
+    
+    canvas.create_text(10, 15, anchor="nw", text=f"Розглядаємо предмет {i+1}", font=("Arial", 10, "bold"))
+    canvas.create_text(10, 40, anchor="nw", text=f"Залишилось місця: {remaining_w}")
+    canvas.create_text(10, 65, anchor="nw", text=f"Взяті предмети: {[x+1 for x in taken]}")
+    canvas.create_text(10, 90, anchor="nw", text=f"Поточна цінність: {current_value}")
+    
+    canvas.create_text(300, 40, anchor="nw", text=f"Найкраща цінність: {self.rec_best_value}", fill="green")
+    canvas.create_text(300, 65, anchor="nw", text=f"Найкращий набір: {self.rec_best_combination}", fill="green")
+    
+    # Візуалізація дерева рекурсії
+    stack_size = len(self.rec_stack)
+    canvas.create_text(10, 115, anchor="nw", text=f"Глибина рекурсії: {stack_size}")
+
+def _finish_rec_animation(self):
+    """Завершення анімації рекурсивного методу"""
+    self.result_label.config(text=f"Найкращий набір: {self.rec_best_combination}", foreground="green")
+    self.max_value_label.config(text=f"Максимальна цінність: {self.rec_best_value}")
+    self.update_animation_status(f"Анімація завершена! Найкраща цінність: {self.rec_best_value}")
+
     """K-14: Панель керування анімацією (Play/Pause/Step/Speed)"""
 def setup_animation_panel(self, parent):
     """Створення панелі керування анімацією"""
