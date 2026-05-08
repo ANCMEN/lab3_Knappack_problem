@@ -423,115 +423,66 @@ class AnimationController:
         # Кроки: для кожної клітинки (i, w)
         self.animation_controller.total_steps = (n + 1) * (W + 1)
         self.animation_controller.current_step = 0
-        self.animation_controller.animation_type = "dp"
+        self.animation_controller.animation_type = self._dp_generator()
 
         
         # Очищуємо попереднє відображення
-        self.clear_animation_canvas()
         for widget in self.table_frame.winfo_children():
             widget.destroy()
+
+        self.animation_controller.start()
         
         # Показуємо початкову таблицю
         self._display_dp_table_with_highlight(0, 0)
             
-        self.animation_controller.start()
+        
 
-def animate_step_DP(self):
-    """Один крок анімації DP (заповнення однієї клітинки)"""
-    i, w = self.dp_i, self.dp_w
-    weights, values = self.dp_weights, self.dp_values
-    W = self.dp_W
-    
-    if i > self.dp_n:
-        # Анімація завершена — показуємо результат
-        self.finish_DP_animation()
+def _dp_generator(self):
+    n, W, weights, values = self.parse_input()
+    if n is None:
         return
     
-    # Обчислюємо значення для dp[i][w]
-    if weights[i-1] <= w:
-        self.dp_table[i][w] = max(self.dp_table[i-1][w], 
-                                   self.dp_table[i-1][w - weights[i-1]] + values[i-1])
-    else:
-        self.dp_table[i][w] = self.dp_table[i-1][w]
+    self.dp_weights = weights
+    self.dp_values = values
+    self.dp_n = n
+    self.dp_W = W
     
-    # Оновлюємо відображення таблиці з підсвіткою активної клітинки
-    self.update_table_with_highlight(i, w)
+    # Ініціалізуємо таблицю DP
+    self.dp_table = [[0] * (W + 1) for _ in range(n + 1)]
+    self.dp_i = 1
+    self.dp_w = 0
     
-    self.update_progress(self.animation_controller.current_step, self.animation_controller.total_steps)
+    # Всього кроків = (n+1) * (W+1)
+    self.animation_controller.total_steps = (n + 1) * (W + 1)
+    self.animation_controller.current_step = 0
+    self.animation_controller.animation_generator = self._dp_generator()
     
-    # Переходимо до наступної клітинки
-    if w < W:
-        self.dp_w += 1
-    else:
-        self.dp_i += 1
-        self.dp_w = 0
-
-def update_table_with_highlight(self, active_i, active_w):
-    """Відображення таблиці з виділенням активної клітинки"""
+    # Очищуємо попереднє відображення
     for widget in self.table_frame.winfo_children():
         widget.destroy()
     
-    n, W = self.dp_n, self.dp_W
-    columns = ["i"] + [f"w={w}" for w in range(W + 1)]
-    tree = ttk.Treeview(self.table_frame, columns=columns, show="headings", height=min(n+2, 20))
-    
-    tree.heading("i", text="i")
-    for w in range(W + 1):
-        tree.heading(f"w={w}", text=f"{w}")
-        tree.column(f"w={w}", width=50, anchor="center")
-    tree.column("i", width=40, anchor="center")
-    
-    for i in range(n + 1):
-        row_values = [str(i)] + [str(self.dp_table[i][w]) for w in range(W + 1)]
-        item = tree.insert("", "end", values=row_values)
-        
-        # Виділяємо активну клітинку червоним
-        if i == active_i:
-            tree.tag_configure("active_cell", background="#ffcccc")
-            tree.item(item, tags=("active_cell",))
-        # Виділяємо вибрані предмети зеленим (після завершення)
-        elif active_i == -1 and i > 0 and (i-1) in self.selected_items:
-            tree.tag_configure(f"selected_{i}", background="#90EE90")
-            tree.item(item, tags=(f"selected_{i}",))
-    
-    scrollbar = ttk.Scrollbar(self.table_frame, orient=tk.VERTICAL, command=tree.yview)
-    tree.configure(yscrollcommand=scrollbar.set)
-    tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-    
-    # Для підсвітки конкретної комірки додаємо додатковий рядок
-    if active_i >= 0:
-        tree.tag_configure("active_row", background="#ffffcc")
-        tree.item(item, tags=("active_row",))
+    self.animation_controller.start()
 
-def _show_dp_formula(self, i, w):
-    """Показує формулу для поточної комірки в Canvas"""
-    canvas = self.animation_canvas
-    canvas.delete("all")
-    
+def _dp_generator(self):
+    """Генератор для покрокового заповнення таблиці DP"""
+    n, W = self.dp_n, self.dp_W
     weights, values = self.dp_weights, self.dp_values
     
-    if i <= 0:
-        canvas.create_text(10, 15, anchor="nw", text="База: dp[0][w] = 0", font=("Arial", 10))
-        return
+    for i in range(1, n + 1):
+        for w in range(W + 1):
+            # Обчислюємо dp[i][w]
+            if weights[i-1] <= w:
+                self.dp_table[i][w] = max(self.dp_table[i-1][w], 
+                                           self.dp_table[i-1][w - weights[i-1]] + values[i-1])
+            else:
+                self.dp_table[i][w] = self.dp_table[i-1][w]
+            
+            # Відображаємо таблицю з підсвіткою активної комірки
+            self._display_table_with_highlight(i, w)
+            
+            yield  # Пауза для анімації
     
-    formula = f"dp[{i}][{w}] = max(dp[{i-1}][{w}], "
-    if w >= weights[i-1]:
-        formula += f"dp[{i-1}][{w - weights[i-1]}] + {values[i-1]})"
-        formula += f"\n= max({self.dp_table[i-1][w]}, {self.dp_table[i-1][w - weights[i-1]]} + {values[i-1]})"
-    else:
-        formula += f"dp[{i-1}][{w}] (предмет не влазить))"
-    
-    result = f"= {self.dp_table[i][w]}"
-    
-    canvas.create_text(10, 15, anchor="nw", text=formula, font=("Arial", 9))
-    canvas.create_text(10, 70, anchor="nw", text=result, font=("Arial", 10, "bold"), fill="blue")
-
-def _finish_dp_animation(self):
-    """Завершення анімації DP"""
-    n, W = self.dp_n, self.dp_W
-    weights = self.dp_weights
-    
+    # Анімація завершена — показуємо результат
     max_value = self.dp_table[n][W]
     
     # Відновлення вибраних предметів
@@ -542,10 +493,45 @@ def _finish_dp_animation(self):
             selected.append(i-1)
             w -= weights[i-1]
     selected.reverse()
+    self.selected_items = selected
     
-    self.display_result(selected, self.dp_weights, self.dp_values, max_value)
-    self._display_dp_table_with_highlight(-1, -1)
-    self.update_animation_status(f"Анімація DP завершена! Макс. цінність: {max_value}")
+    self.display_result(selected, weights, values, max_value)
+    self._display_table_with_highlight(-1, -1)  # Прибираємо підсвітку
+    self.update_animation_status("✅ Анімація DP завершена!")
+
+def _display_table_with_highlight(self, active_i, active_w):
+    """Відображення таблиці з виділенням активної комірки"""
+    for widget in self.table_frame.winfo_children():
+        widget.destroy()
+    
+    n, W = self.dp_n, self.dp_W
+    columns = ["i"] + [f"{w}" for w in range(W + 1)]
+    tree = ttk.Treeview(self.table_frame, columns=columns, show="headings", height=min(n+2, 15))
+    
+    tree.heading("i", text="i")
+    for w in range(W + 1):
+        tree.heading(f"{w}", text=f"{w}")
+        tree.column(f"{w}", width=45, anchor="center")
+    tree.column("i", width=40, anchor="center")
+    
+    for i in range(n + 1):
+        row_values = [str(i)] + [str(self.dp_table[i][w]) for w in range(W + 1)]
+        item = tree.insert("", "end", values=row_values)
+        
+        # Підсвітка активної комірки
+        if i == active_i and active_w >= 0:
+            tree.tag_configure("active_cell", background="#ffcccc")
+            tree.item(item, tags=("active_cell",))
+        
+        # Підсвітка вибраних предметів (після завершення)
+        if active_i == -1 and i > 0 and hasattr(self, 'selected_items') and (i-1) in self.selected_items:
+            tree.tag_configure(f"selected_{i}", background="#90EE90")
+            tree.item(item, tags=(f"selected_{i}",))
+    
+    scrollbar = ttk.Scrollbar(self.table_frame, orient=tk.VERTICAL, command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+    tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     """K-14: Панель керування анімацією (Play/Pause/Step/Speed)"""
 def setup_animation_panel(self, parent):
