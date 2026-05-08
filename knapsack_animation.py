@@ -321,23 +321,30 @@ class AnimationController:
         
     def animate_bruteforce(self):
         """Підготовка анімації для Brute Force"""
-        n = self.n_var.get()
-        self.animation_controller.total_steps = (1 << n)  # 2^n кроків
+        n, W, weights, values = self.parse_input()
+        if n is None:
+            return
+        
+        self.bf_weights = weights
+        self.bf_values = values
+        self.bf_n = n
+        self.bf_W = W
+        self.bf_best_value = 0
+        self.bf_best_combination = []
+        self.bf_current_mask = 0
+        self.bf_total_masks = 1 << n
+
+            # Налаштовуємо контролер
+        self.animation_controller.total_steps = self.bf_total_masks
         self.animation_controller.current_step = 0
         self.animation_controller.is_running = True
         
-        # Зберігаємо дані для анімації
-        self.bf_best_value = 0
-        self.bf_best_combination = []
-        self.bf_weights = None
-        self.bf_values = None
-        self.bf_n = n
-        self.bf_W = self.W_var.get()
-        
         # Очищуємо Canvas
         self.clear_animation_canvas()
-        
+        self.clear_table()
+
         # Запускаємо анімацію
+        self.animation_controller.animation_type = "bruteforce"
         self.animation_controller.next_step()
 
     def animate_step_bruteforce(self, mask):
@@ -355,49 +362,47 @@ class AnimationController:
                 total_value += values[i]
                 current_items.append(i+1)
         
-        # Оновлюємо Canvas
-        self.update_animation_canvas({
-            "mask": bin(mask),
-            "mask_dec": mask,
-            "items": current_items,
-            "weight": total_weight,
-            "value": total_value,
-            "best_value": self.bf_best_value,
-            "best_items": [i+1 for i in self.bf_best_combination]
-        })
-        
-        # Оновлюємо прогрес
-        self.update_progress(mask + 1, self.animation_controller.total_steps)
-        
         # Оновлюємо найкращий результат
         if total_weight <= W and total_value > self.bf_best_value:
             self.bf_best_value = total_value
-            self.bf_best_combination = [i for i in range(n) if (mask >> i) & 1]
-            # Візуально виділити новий найкращий набір
-            self.highlight_best_set()
+            self.bf_best_combination = current_items.copy()
+        
+        # Відображаємо поточний стан
+        self._render_bf_frame(mask, current_items, total_weight, total_value)
+        
+        # Оновлюємо прогрес
+        self.update_progress(mask + 1, self.bf_total_masks)
+        
+        # Переходимо до наступної маски
+        self.bf_current_mask += 1
 
-    def render_bruteforce_frame(self, data):
+    def _render_bf_frame(self, mask, items, weight, value):
         """Відображення одного кадру Brute Force"""
         canvas = self.animation_canvas
         canvas.delete("all")
         
-        width, height = 600, 150
+        width, height = 580, 120
         canvas.config(width=width, height=height)
         
-        # Заголовок
-        canvas.create_text(10, 15, anchor="nw", text=f"Маска: {data['mask']} ({data['mask_dec']})", font=("Arial", 12, "bold"))
-        canvas.create_text(10, 40, anchor="nw", text=f"Поточні предмети: {data['items']}")
-        canvas.create_text(10, 65, anchor="nw", text=f"Вага: {data['weight']} / {self.bf_W}")
-        canvas.create_text(10, 90, anchor="nw", text=f"Цінність: {data['value']}")
+        canvas.create_text(10, 15, anchor="nw", text=f"Маска: {mask:0{self.bf_n}b} ({mask})", font=("Arial", 10, "bold"))
+        canvas.create_text(10, 40, anchor="nw", text=f"Поточні предмети: {items}")
+        canvas.create_text(10, 65, anchor="nw", text=f"Вага: {weight} / {self.bf_W}")
+        canvas.create_text(10, 90, anchor="nw", text=f"Цінність: {value}")
         
-        # Найкращий результат
-        canvas.create_text(300, 40, anchor="nw", text=f"Найкраща цінність: {data['best_value']}", fill="green")
-        canvas.create_text(300, 65, anchor="nw", text=f"Найкращий набір: {data['best_items']}", fill="green")
+        canvas.create_text(300, 40, anchor="nw", text=f"Найкраща цінність: {self.bf_best_value}", fill="green")
+        canvas.create_text(300, 65, anchor="nw", text=f"Найкращий набір: {self.bf_best_combination}", fill="green")
         
         # Прогрес-бар
-        progress = data['mask_dec'] / self.animation_controller.total_steps
-        canvas.create_rectangle(10, 120, 10 + 580 * progress, 140, fill="blue", outline="")
-        canvas.create_text(300, 130, text=f"{int(progress*100)}%", font=("Arial", 10)) 
+        progress = mask / self.bf_total_masks
+        canvas.create_rectangle(10, 105, 10 + 560 * progress, 118, fill="blue", outline="")
+        canvas.create_text(300, 112, text=f"{int(progress*100)}%", font=("Arial", 8))
+
+    def _finish_bf_animation(self):
+        """Завершення анімації Brute Force"""
+        self.result_label.config(text=f"Найкращий набір: {self.bf_best_combination}", foreground="green")
+        self.max_value_label.config(text=f"Максимальна цінність: {self.bf_best_value}")
+        self.update_animation_status(f"Анімація завершена! Найкраща цінність: {self.bf_best_value}")
+
     """K-13: Анімація DP з покроковим заповненням таблиці"""
     def animate_DP(self):
         """Підготовка анімації для DP"""
@@ -412,17 +417,23 @@ class AnimationController:
         
         # Ініціалізуємо таблицю DP
         self.dp_table = [[0] * (W + 1) for _ in range(n + 1)]
+        self.dp_i = 1
+        self.dp_w = 0
         
         # Кроки: для кожної клітинки (i, w)
         self.animation_controller.total_steps = (n + 1) * (W + 1)
         self.animation_controller.current_step = 0
+        self.animation_controller.animation_type = "dp"
+
         
-        self.dp_i = 1
-        self.dp_w = 0
-        
+        # Очищуємо попереднє відображення
         self.clear_animation_canvas()
-        self.display_table(self.dp_weights, self.dp_values, self.dp_table, [])
+        for widget in self.table_frame.winfo_children():
+            widget.destroy()
         
+        # Показуємо початкову таблицю
+        self._display_dp_table_with_highlight(0, 0)
+            
         self.animation_controller.start()
 
 def animate_step_DP(self):
@@ -490,12 +501,51 @@ def update_table_with_highlight(self, active_i, active_w):
     
     # Для підсвітки конкретної комірки додаємо додатковий рядок
     if active_i >= 0:
-        self.highlight_cell(tree, active_i, active_w)
+        tree.tag_configure("active_row", background="#ffffcc")
+        tree.item(item, tags=("active_row",))
 
-def highlight_cell(self, tree, i, w):
-    """Підсвітка конкретної комірки в Treeview (складно через обмеження Treeview)"""
-    # Альтернатива: показувати активну комірку в окремому Canvas
-    self.show_active_cell_in_canvas(i, w)
+def _show_dp_formula(self, i, w):
+    """Показує формулу для поточної комірки в Canvas"""
+    canvas = self.animation_canvas
+    canvas.delete("all")
+    
+    weights, values = self.dp_weights, self.dp_values
+    
+    if i <= 0:
+        canvas.create_text(10, 15, anchor="nw", text="База: dp[0][w] = 0", font=("Arial", 10))
+        return
+    
+    formula = f"dp[{i}][{w}] = max(dp[{i-1}][{w}], "
+    if w >= weights[i-1]:
+        formula += f"dp[{i-1}][{w - weights[i-1]}] + {values[i-1]})"
+        formula += f"\n= max({self.dp_table[i-1][w]}, {self.dp_table[i-1][w - weights[i-1]]} + {values[i-1]})"
+    else:
+        formula += f"dp[{i-1}][{w}] (предмет не влазить))"
+    
+    result = f"= {self.dp_table[i][w]}"
+    
+    canvas.create_text(10, 15, anchor="nw", text=formula, font=("Arial", 9))
+    canvas.create_text(10, 70, anchor="nw", text=result, font=("Arial", 10, "bold"), fill="blue")
+
+def _finish_dp_animation(self):
+    """Завершення анімації DP"""
+    n, W = self.dp_n, self.dp_W
+    weights = self.dp_weights
+    
+    max_value = self.dp_table[n][W]
+    
+    # Відновлення вибраних предметів
+    selected = []
+    w = W
+    for i in range(n, 0, -1):
+        if self.dp_table[i][w] != self.dp_table[i-1][w]:
+            selected.append(i-1)
+            w -= weights[i-1]
+    selected.reverse()
+    
+    self.display_result(selected, self.dp_weights, self.dp_values, max_value)
+    self._display_dp_table_with_highlight(-1, -1)
+    self.update_animation_status(f"Анімація DP завершена! Макс. цінність: {max_value}")
 
     """K-14: Панель керування анімацією (Play/Pause/Step/Speed)"""
 def setup_animation_panel(self, parent):
@@ -532,6 +582,34 @@ def setup_animation_panel(self, parent):
     
     self.status_label = ttk.Label(panel, text="Готовий до анімації")
     self.status_label.pack()
+
+def start_animation(self):
+    """Запуск анімації для вибраного методу"""
+    method = self.method_var.get()
+    
+    if method == "Brute Force (перебір)":
+        self.animate_bruteforce()
+    elif method == "Dynamic Programming (DP)":
+        self.animate_DP()
+    else:
+        messagebox.showinfo("Інформація", f"Анімація для методу '{method}' буде реалізована пізніше")
+
+def reset_animation(self):
+    """Скидання анімації"""
+    self.animation_controller.stop()
+    self.clear_animation_canvas()
+    self.update_progress(0, 1)
+    self.update_animation_status("Анімацію скинуто")
+
+def clear_animation_canvas(self):
+    """Очищення Canvas анімації"""
+    if hasattr(self, 'animation_canvas'):
+        self.animation_canvas.delete("all")
+
+def update_animation_status(self, message):
+    """Оновлення статусу анімації"""
+    if hasattr(self, 'animation_status_label'):
+        self.animation_status_label.config(text=message)    
 
 def change_animation_speed(self, event=None):
     """Зміна швидкості анімації"""
