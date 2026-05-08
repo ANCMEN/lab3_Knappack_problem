@@ -263,6 +263,7 @@ class AnimationController:
         self.current_step = 0
         self.total_steps = 0
         self.after_id = None
+        self.animation_type = None
         
     def start(self):
         """Запуск анімації"""
@@ -293,24 +294,41 @@ class AnimationController:
         if self.after_id:
             self.app.root.after_cancel(self.after_id)
     
-    def next_step(self):
-        """Виконання одного кроку"""
+    def _next_step(self):
         if not self.is_running or self.is_paused:
             return
-        if self.current_step >= self.total_steps:
-            self.stop()
-            self.app.update_animation_status("Анімація завершена!")
-            return
         
-        # Викликаємо метод анімації поточного алгоритму
-        if hasattr(self.app, f"animate_step_{self.current_step}"):
-            getattr(self.app, f"animate_step_{self.current_step}")()
+        animation_methods = {
+            "bruteforce": ("animate_step_bruteforce", "_finish_bf_animation"),
+            "dp": ("animate_step_DP", "_finish_dp_animation"),
+            "recursive": ("animate_step_recursive", "_finish_rec_animation"),
+            "greedy": ("animate_step_greedy", "_finish_greedy_animation"),
+            "branchbound": ("animate_step_branch_bound", "_finish_bb_animation")
+        }
         
-        self.current_step += 1
-        self.app.update_progress(self.current_step, self.total_steps)
+        if self.animation_type in animation_methods:
+            step_method, finish_method = animation_methods[self.animation_type]
+            
+            if hasattr(self.app, step_method):
+                getattr(self.app, step_method)()
+                self.current_step += 1
+                self.app.update_progress(self.current_step, self.total_steps)
+                
+                # Перевіряємо завершення
+                if self.current_step >= self.total_steps:
+                    self.stop()
+                    if hasattr(self.app, finish_method):
+                        getattr(self.app, finish_method)()
+                    self.app.update_animation_status("Анімація завершена!")
+                    return
         
-        # Плануємо наступний крок
-        self.after_id = self.app.root.after(self.speed, self.next_step)
+        self.after_id = self.app.root.after(self.speed, self._next_step)
+    
+    def next_step_manual(self):
+        """Ручний крок (кнопка Step)"""
+        if self.is_running:
+            self.pause()
+        self._next_step()
     
     def set_speed(self, speed):
         """Зміна швидкості"""
